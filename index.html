@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="src/output.css" rel="stylesheet">
+    <title>Document</title>
+</head>
+<body class="bg-gradient-to-b  from-[#0f172a] via-[#0a0f1e] to-black text-white min-h-screen" >
+    <!-- header of site -->
+      
+      
+      <div class="relative overflow-x-auto p-6 	bg-gradient-to-br ">
+        <div class=" p-10 flex items-center gap-x-10 h-[150px] shadow-xl  bg-neutral-400/20 backdrop-blur-[1px] border border-neutral-400/20 m-10 rounded-4xl">
+            <img src="/uzum-market-seeklogo-6.svg" alt="Logo" class="w-40 h-40 object-contain">
+            <h1 class="font-mono text-3xl font-bold text-blue-400 leading-snug ">
+              Мониторинг открытия смен и заказов в статусе <br> <span class="text-yellow-300">Истек Срок хранения</span>
+            </h1>
+            
+          </div>
+        <div class="relative overflow-x-auto shadow-xl rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
+          <table class="w-full text-sm text-left text-gray-200">
+            <thead class="text-md uppercase  bg-neutral-400/20 backdrop-blur-[1px] border border-neutral-400/20 text-[#cbd5e1]">
+              <tr>
+                <th scope="col" class="px-6 py-4">ПВЗ</th>
+                <th scope="col" class="px-6 py-4">Статус</th>
+                <th scope="col" class="px-6 py-4">Время открытия</th>
+                <th scope="col" class="px-6 py-4">Опоздание</th>    
+                <th scope="col" class="px-6 py-4">Истек срок хранения</th>
+              </tr>
+            </thead>
+      
+            <tbody id="shift-table-body" class="text-lg divide-y divide-white/10">
+              <!-- Строки динамически добавляются через JS -->
+            </tbody>
+          </table>
+        </div>
+      
+        <div id="output" class="mt-6 text-white text-center"></div>
+      </div>
+      <div class="flex justify-center p-4 text-center">
+        <button id="refresh-btn" class="  flex items-center gap-2 px-10 py-5 text-sm font-medium rounded-md bg-blue-400/30 backdrop-blur-md text-white hover:bg-blue-700 transition hidden">
+            <svg id="spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke-width="4" stroke="currentColor" stroke-linecap="round" stroke-dasharray="60" stroke-dashoffset="20" />
+            </svg>
+            Обновить
+          </button>
+      </div>
+      <div class="text-center">
+        <p id="last-updated" class="text-sm text-gray-400 mt-2">—</p>
+    </div>
+      <script>
+        const output = document.getElementById("output");
+    const button = document.getElementById("refresh-btn");
+    const tbody = document.getElementById("shift-table-body");
+    const updatedAt = document.getElementById("last-updated");
+
+    // ✅ Основная функция загрузки данных
+    async function loadData() {
+      // Прячем кнопку перед загрузкой
+      button.classList.add("hidden");
+      const now = new Date();
+      updatedAt.textContent = `Последнее обновление: ${now.toLocaleTimeString('ru-RU')}`;
+      // Показываем лоадер
+      output.innerHTML = `
+        <div class="flex items-center justify-center gap-3 text-blue-400 text-lg">
+          <svg class="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          <span>Загружаем данные...</span>
+        </div>
+      `;
+
+      try {
+        const res = await fetch("https://shifttracker-1.onrender.com/api/stats");
+        if (!res.ok) throw new Error("Сервер недоступен");
+
+        const data = await res.json();
+
+        // Очищаем вывод и таблицу
+        output.innerHTML = "";
+        tbody.innerHTML = "";
+
+        data.forEach(store => {
+          const row = document.createElement("tr");
+          row.className = "hover:text-blue-400 transition";
+
+          const delay = store.delayMinutes
+            ? `<span class="text-red-600">❌ ${store.delayMinutes} мин</span>` : "—";
+
+          const shiftStatus = store.shiftStatus === "opened"
+            ? "🟢 Открыт"
+            : store.shiftStatus === "closed"
+            ? "🔴 Закрыт"
+            : store.shiftStatus === "error"
+            ? "⚠️ Ошибка"
+            : store.shiftStatus ?? "—";
+
+          row.innerHTML = `
+            <td class="px-6 py-4">${store.name}</td>
+            <td class="px-6 py-4">${shiftStatus}</td>
+            <td class="px-6 py-4">${store.timeOpened ?? "—"}</td>
+            <td class="px-6 py-4">${delay}</td>
+            <td class="px-6 py-4 ${store.orderCount > 0 ? 'text-yellow-300 font-bold' : 'text-gray-400'}">
+              ${store.orderCount > 0 ? store.orderCount : "—"}
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        // ✅ Показываем кнопку после успешной загрузки
+        button.classList.remove("hidden");
+
+      } catch (err) {
+        output.innerHTML = `<p class='text-red-500'>⚠️ Ошибка загрузки: ${err.message}</p>`;
+      }
+    }
+    
+
+    // Загрузка при первом открытии
+    window.onload = loadData;
+
+    // Обработчик кнопки
+
+    button.addEventListener("click", loadData);
+  </script>
+      </script>
+</body>
+</html>
