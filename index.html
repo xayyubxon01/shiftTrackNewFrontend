@@ -74,7 +74,7 @@
       `;
 
       try {
-        const res = await fetch("https://shifttracker-1.onrender.com/api/stats");
+        const res = await fetch("https://shifttracker-ks49.onrender.com/api/stats");
         if (!res.ok) throw new Error("Сервер недоступен");
 
         const data = await res.json();
